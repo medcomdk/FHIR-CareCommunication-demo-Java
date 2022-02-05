@@ -1,0 +1,6 @@
+common/.mvn
+target
+mvnw
+mvnw.cmd
+receiver/.mvn
+sender/.mvn
