@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import org.hl7.fhir.r4.model.HumanName.NameUse;
 
 
 public class Builder {
@@ -20,6 +21,9 @@ public class Builder {
   public static final String MEDCOM_CARE_COMMUNICATION_PROFILE = "http://medcomfhir.dk/fhir/core/1.0/StructureDefinition/medcom-careCommunication-message";
   public static final String DATETIME_EXTENSION_URL = "http://medcomfhir.dk/fhir/core/1.0/StructureDefinition/medcom-core-datetime-extension";
   public static final String AUTHOR_EXTENSION_URL = "http://medcomfhir.dk/fhir/core/1.0/StructureDefinition/medcom-core-author-extension";
+  public static final String DESTINATION_USE_EXTENSION = "http://medcomfhir.dk/fhir/core/1.0/StructureDefinition/medcom-messaging-destinationUseExtension";
+  public static final String DESTINATION_USE = "http://medcomfhir.dk/fhir/core/1.0/CodeSystem/medcom-messaging-destinationUse";
+  public static final String COMMUNICATION_CATEGORY_CODES = "http://medcomfhir.dk/fhir/core/1.0/CodeSystem/medcom-careCommunication-categoryCodes";
 
   static String nextRandomId() {
     return UUID.randomUUID().toString();
@@ -41,8 +45,8 @@ public class Builder {
   }
 
   public static Patient buildPatient(String patientName, List<Address> address, boolean deceased) {
-    var patient = new Patient().addName(new HumanName().addGiven(patientName)).setAddress(address)
-        .setDeceased(new BooleanType(deceased));
+    var patient = new Patient().addName(new HumanName().addGiven(patientName).setFamily(patientName).setUse(NameUse.OFFICIAL)).setAddress(address)
+        .setDeceased(new BooleanType(deceased)).addIdentifier(new Identifier().setSystem("urn:oid:1.2.208.176.1.2").setValue("0506504005"));
     patient.setId(nextRandomId());
     return patient;
   }
@@ -50,11 +54,15 @@ public class Builder {
   public static Communication buildCommunication(Reference author, String text, Reference patient,
       LocalDateTime date) {
     var communication = new Communication().setSubject(patient)
-        .addPayload(
-            new Communication.CommunicationPayloadComponent().setContent(new StringType(text)))
-        .setStatus(Communication.CommunicationStatus.UNKNOWN);
-    communication.addExtension(DATETIME_EXTENSION_URL, new DateTimeType(Timestamp.valueOf((date))));
-    communication.addExtension(AUTHOR_EXTENSION_URL, author);
+        .setStatus(Communication.CommunicationStatus.UNKNOWN)
+        .setSent(new Date())
+        .addCategory(new CodeableConcept().addCoding(new Coding().setSystem(
+            COMMUNICATION_CATEGORY_CODES).setCode("carecoordination")));
+    var payload = new Communication.CommunicationPayloadComponent().setContent(
+        new StringType(text));
+    payload.addExtension(DATETIME_EXTENSION_URL, new DateTimeType(Timestamp.valueOf((date))));
+    payload.addExtension(AUTHOR_EXTENSION_URL, author);
+    communication.addPayload(payload);
     communication.setId(nextRandomId());
     return communication;
   }
@@ -99,9 +107,17 @@ public class Builder {
     var messageHeader = new MessageHeader().setEvent(
             new Coding().setSystem(MESSAGE_EVENT_CODE_SYSTEM).setCode(CARE_COMMUNICATION_MESSAGE))
         .setSource(new MessageHeader.MessageSourceComponent().setEndpoint(UNKNOWN_ENDPOINT))
-        .setSender(sender).addFocus(communication).addDestination(
-            new MessageHeader.MessageDestinationComponent().setEndpoint(UNKNOWN_ENDPOINT)
-                .setReceiver(new Reference(receiver)));
+        .setSender(sender).addFocus(communication);
+
+    var primaryDestination = new MessageHeader.MessageDestinationComponent().setEndpoint(
+            UNKNOWN_ENDPOINT)
+        .setReceiver(new Reference(receiver));
+    primaryDestination.addExtension(new Extension().setUrl(DESTINATION_USE_EXTENSION)
+        .setValue(new Coding()
+            .setSystem(DESTINATION_USE)
+            .setCode("primary")));
+    messageHeader.addDestination(primaryDestination);
+
     messageHeader.setId(nextRandomId());
     return messageHeader;
   }
