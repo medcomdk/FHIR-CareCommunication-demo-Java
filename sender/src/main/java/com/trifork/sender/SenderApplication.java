@@ -34,7 +34,7 @@ public class SenderApplication implements CommandLineRunner {
     var senderSORCode = getInputString("123456789012345");
     System.out.println("  - EAN Code:");
     var senderEANCode = getInputString("123456789012");
-    var sender = Builder.buildOrganization(senderName, senderSORCode, senderEANCode);
+    var sender = ResourceFactory.buildOrganization(senderName, senderSORCode, senderEANCode);
 
     System.out.println("Receiver Name:");
     var receiverName = getInputString("Receiver Name");
@@ -42,7 +42,7 @@ public class SenderApplication implements CommandLineRunner {
     var receiverSORCode = getInputString("0987654321098765");
     System.out.println("  - EAN Code:");
     var receiverEANCode = getInputString("098765432109");
-    var receiver = Builder.buildOrganization(receiverName, receiverSORCode, receiverEANCode);
+    var receiver = ResourceFactory.buildOrganization(receiverName, receiverSORCode, receiverEANCode);
 
     System.out.println("Patient Name:");
     var patientName = getInputString("Patient Name");
@@ -52,21 +52,21 @@ public class SenderApplication implements CommandLineRunner {
     var addressPostalCode = getInputString("Postal Code");
     System.out.println("  - Address (city):");
     var addressCity = getInputString("City");
-    var address = Builder.buildAddress(addressStreet, addressPostalCode, addressCity);
+    var address = ResourceFactory.buildAddress(addressStreet, addressPostalCode, addressCity);
     System.out.println("  - Deceased (Y/N):");
     var deceased = getInputString("Y").toUpperCase().startsWith("Y");
-    var patient = Builder.buildPatient(patientName, List.of(address), deceased);
+    var patient = ResourceFactory.buildPatient(patientName, List.of(address), deceased);
     var category = "carecoordination";
 
-    var author = Builder.buildPractitioner("Michael", "Burns");
+    var author = ResourceFactory.buildPractitioner("Michael", "Burns");
     System.out.println("Text:");
     var text = getInputString("Text content:");
 
-    var communication = Builder.buildCommunication(new Reference(author), text,
+    var communication = ResourceFactory.buildCommunication(new Reference(author), text,
         new Reference(patient),
         LocalDateTime.now());
 
-    var messageBundle = Builder.buildCareCommunicationMessageBundle(patient, author, communication,
+    var messageBundle = ResourceFactory.buildCareCommunicationMessageBundle(patient, author, communication,
         sender,
         receiver);
 

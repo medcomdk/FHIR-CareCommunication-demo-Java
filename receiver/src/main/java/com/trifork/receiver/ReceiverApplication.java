@@ -17,6 +17,7 @@ import org.hl7.fhir.r4.model.MessageHeader;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Provenance;
+import org.hl7.fhir.r4.model.StringType;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -64,15 +65,17 @@ public class ReceiverApplication implements CommandLineRunner {
 
     var resources = BundleUtil.toListOfResources(fhirContext, messageBundle);
 
-    Patient patient = getSingleResource(Patient.class, resources);
-    Communication communication = getSingleResource(Communication.class, resources);
-    Provenance provenance = getSingleResource(Provenance.class, resources);
-    MessageHeader messageHeader = getSingleResource(MessageHeader.class, resources);
-    List<Organization> organizations = getResources(Organization.class, resources);
+    Patient patient = ResourceParser.getSingleResource(Patient.class, resources);
+    Communication communication = ResourceParser.getSingleResource(Communication.class, resources);
+    Provenance provenance = ResourceParser.getSingleResource(Provenance.class, resources);
+    MessageHeader messageHeader = ResourceParser.getSingleResource(MessageHeader.class, resources);
+    List<Organization> organizations = ResourceParser.getResources(Organization.class, resources);
 
     System.out.println("---------------------------");
     patient.getName().stream().forEach(name -> {
-      System.out.println(name.getGiven() + " " + name.getFamily());
+      System.out.println(
+          name.getGiven().stream().map(StringType::getValue).collect(Collectors.joining(", ")) + " "
+              + name.getFamily());
     });
 
     System.out.println("---------------------------");
@@ -83,23 +86,9 @@ public class ReceiverApplication implements CommandLineRunner {
 
   }
 
-  static <T> T getSingleResource(Class clazz, List<IBaseResource> resourceList) {
-    return (T) resourceList.stream().filter(clazz::isInstance).map(clazz::cast)
-        .collect(singleElement()).get();
-  }
-
-  static List getResources(Class clazz, List<IBaseResource> resourceList) {
-    return resourceList.stream().filter(clazz::isInstance).map(clazz::cast)
-        .collect(Collectors.toList());
-  }
-
-  static <T> Collector<T, ?, Optional<T>> singleElement() {
-    return Collectors.collectingAndThen(Collectors.toList(),
-        list -> list.size() == 1 ? Optional.of(list.get(0)) : Optional.empty());
-  }
-
   String getInputString(String input) {
     var result = scanner.nextLine();
     return result.isBlank() ? input : result;
   }
+
 }

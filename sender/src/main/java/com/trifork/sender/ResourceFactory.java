@@ -10,7 +10,7 @@ import java.util.UUID;
 import org.hl7.fhir.r4.model.HumanName.NameUse;
 
 
-public class Builder {
+public class ResourceFactory {
 
   public static final String SOR_OID = "urn:oid:1.2.208.176.1.1";
   public static final String EAN_OID = "urn:oid:1.3.88";
