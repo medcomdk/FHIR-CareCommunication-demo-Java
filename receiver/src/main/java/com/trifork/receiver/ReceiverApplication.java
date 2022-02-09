@@ -13,10 +13,13 @@ import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Communication;
+import org.hl7.fhir.r4.model.Communication.CommunicationPayloadComponent;
 import org.hl7.fhir.r4.model.MessageHeader;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Provenance;
+import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -83,7 +86,16 @@ public class ReceiverApplication implements CommandLineRunner {
       System.out.println(payload.getContent());
     });
 
+    communication.getPayload().stream().forEach(payload -> {
+      var valueReference = payload.getExtensionByUrl(Validator.AUTHOR_EXTENSION_URL).getValue();
 
+      // The IG says that `valueReference` is of type `Reference`, and since we at this point have already validated the bundle, the cast will be safe to make
+      // Futhermore the IG says that the reference SHALL resolve within the bundle. Hence it is safe to extract the resource and cast that as Practitioner
+      var practitioner = (Practitioner) ((Reference) valueReference).getResource();
+
+      System.out.println(
+          "Author: " + practitioner.getName().get(0).getNameAsSingleString());
+    });
   }
 
   String getInputString(String input) {

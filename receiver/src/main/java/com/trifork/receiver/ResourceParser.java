@@ -9,6 +9,8 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 public class ResourceParser {
 
 
+
+
   static <T> T getSingleResource(Class clazz, List<IBaseResource> resourceList) {
     return (T) resourceList.stream().filter(clazz::isInstance).map(clazz::cast)
         .collect(singleElement()).get();
