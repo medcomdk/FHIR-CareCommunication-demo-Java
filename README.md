@@ -52,7 +52,7 @@ Both return a generic Fhir POCO (in this case a Bundle).
 The following snippet illustrates how to extract the author extension value from the payload component of the message and handle the reference. The extension value is extracted using `getValue()`. In this case we extract a resource reference which points to a resource in the bundle.
 ```java
  communication.getPayload().stream().forEach(payload -> {
-      var valueReference = payload.getExtensionByUrl(Validator.AUTHOR_EXTENSION_URL).getValue();
+      var valueReference = payload.getExtensionByUrl(AUTHOR_EXTENSION_URL).getValue();
 
       // The IG says that `valueReference` is of type `Reference`, and since we at this point have already validated the bundle, the cast will be safe to make
       // Futhermore the IG says that the reference SHALL resolve within the bundle. Hence it is safe to extract the resource and cast that as Practitioner
@@ -63,6 +63,12 @@ The following snippet illustrates how to extract the author extension value from
     });
 ```
 
+The following snippet illustrates how to add an extension and value to and existing eleement
+
+```java
+payload.addExtension(DATETIME_EXTENSION_URL, new DateTimeType(Timestamp.valueOf((date))));
+```
+
 ## Serializing to FHIR
 The serializer used is the standard serializers from the HL7 HAPI FHIR libraries. The HL7 HAPI FHIR libraries contains separate serializers for Json and Xml that are used as follows:
 ```java
@@ -70,5 +76,43 @@ var json = FhirContext.forR4().newJsonParser().encodeResourceToString(messageBun
 ```
 ```java
 var xml = FhirContext.forR4().newXmlParser().encodeResourceToString(messageBundle);
+```
+
+## Validating FHIR
+HAPI FHIR supports validating incoming/outgoing/data-at-rest FHIR resources in multiple ways - see https://hapifhir.io/hapi-fhir/docs/validation/validation_support_modules.html for more details. The snippet below uses the `NpmPackageValidationSupport` which can be used without any database being present. Basically, the required IG's which are published in the NPM format which are then parsed and loaded into memory for quick evaluation. 
+
+```java
+    FhirContext ctx = FhirContext.forR4();
+    NpmPackageValidationSupport npmPackageSupport = new NpmPackageValidationSupport(ctx);
+
+    try {
+      npmPackageSupport.loadPackageFromClasspath("classpath:dk-core.tgz");
+      npmPackageSupport.loadPackageFromClasspath("classpath:dk-medcom.tgz");
+    } catch (IOException e) {
+      throw new RuntimeException(e.getMessage(), e);
+    }
+
+    // Create a support chain including the NPM Package Support
+    ValidationSupportChain validationSupportChain = new ValidationSupportChain(npmPackageSupport,
+        new DefaultProfileValidationSupport(ctx), new CommonCodeSystemsTerminologyService(ctx),
+        new InMemoryTerminologyServerValidationSupport(ctx),
+        new SnapshotGeneratingValidationSupport(ctx));
+    CachingValidationSupport validationSupport = new CachingValidationSupport(
+        validationSupportChain);
+
+    // Create a validator. Note that for good performance you can create as many validator objects
+    // as you like, but you should reuse the same validation support object in all of the,.
+    FhirValidator validator = ctx.newValidator();
+    FhirInstanceValidator instanceValidator = new FhirInstanceValidator(validationSupport);
+    validator.registerValidatorModule(instanceValidator);
+```
+
+## External validation
+Another way to validate is to use the official validator (HAPI FHIR uses the same under the hood), which can be downloaded [here](https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar)
+
+Example using it:
+
+```
+java -jar validator_cli.jar file.json -ig https://build.fhir.org/ig/hl7dk/dk-medcom/package.tgz
 ```
 
