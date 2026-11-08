@@ -12,8 +12,9 @@ public class ResourceParser {
 
 
   static <T> T getSingleResource(Class clazz, List<IBaseResource> resourceList) {
-    return (T) resourceList.stream().filter(clazz::isInstance).map(clazz::cast)
-        .collect(singleElement()).get();
+    var optional = resourceList.stream().filter(clazz::isInstance).map(clazz::cast)
+        .collect(singleElement());
+    return optional.orElseThrow(() -> new IllegalArgumentException("Expected exactly one resource of type " + clazz.getName()));
   }
 
   static List getResources(Class clazz, List<IBaseResource> resourceList) {

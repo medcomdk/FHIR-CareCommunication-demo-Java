@@ -87,11 +87,15 @@ public class ReceiverApplication implements CommandLineRunner {
     });
 
     communication.getPayload().stream().forEach(payload -> {
-      var valueReference = payload.getExtensionByUrl(Validator.AUTHOR_EXTENSION_URL).getValue();
+      var extension = payload.getExtensionByUrl(Validator.AUTHOR_EXTENSION_URL);
+      if (extension == null) continue;
+      var valueReference = extension.getValue();
 
       // The IG says that `valueReference` is of type `Reference`, and since we at this point have already validated the bundle, the cast will be safe to make
       // Futhermore the IG says that the reference SHALL resolve within the bundle. Hence it is safe to extract the resource and cast that as Practitioner
-      var practitioner = (Practitioner) ((Reference) valueReference).getResource();
+      var resource = ((Reference) valueReference).getResource();
+      if (!(resource instanceof Practitioner)) continue;
+      var practitioner = (Practitioner) resource;
 
       System.out.println(
           "Author: " + practitioner.getName().get(0).getNameAsSingleString());
